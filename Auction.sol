@@ -94,7 +94,7 @@ contract Auction{
     {
         for(int i=0;i<count_bidder;i++)
         {
-            if(bidders[i].addr_bidder==msg.sender)
+            if(bidders[i].addr_bidder==addr)
                 return i;
         }
         return -1;
