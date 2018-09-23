@@ -47,9 +47,21 @@ contract Auction{
         next_notary=0;
     }
     //function to register notary
-    /****put checks ******/
+
      function register_notary()
     {
+        for(int i=0;i<count_bidder;i++)
+        {
+            if(bidders[i].addr_bidder==msg.sender)
+                return;
+        }
+        for(i=0;i<count_notary;i++)
+        {
+            if(notaries[i].addr_notary==msg.sender)
+                return;
+        }
+        if(msg.sender==addr_auctioneer)
+            return;
         notaries[count_notary].addr_notary=msg.sender;
         notaries[count_notary].pay=0;
         count_notary++;
@@ -110,7 +122,17 @@ contract Auction{
     {
         if(msg.sender!=addr_auctioneer)
         {
+            
             int256 id=getBidderId(msg.sender);
+            int256 x = (u+v)%q;
+            uint256 i;
+            for(i=0;i<n_bid_items;i++)
+            {
+                if(bid_items[i]==uint256(x))
+                    break;
+            }
+            if(i == n_bid_items)
+                return;
             if(id!=-1)
             {
                 if(bidders[id].index<bidders[id].n_items)
@@ -133,10 +155,9 @@ contract Auction{
         int256 val1=u1-u2;
         int256 val2=v1-v2;
         if((val1+val2)%q==0)return 0;
-        if(val1 + val2 < 0)
-            sum = val1 + val2 + q;
-        else
-            sum = val1 + val2;
+        sum = val1+val2;
+        while(sum < 0)
+            sum += q;
         if(sum%q < q/2)return 1;
         return 2;
     }
