@@ -300,6 +300,71 @@ contract Auction{
         }
     }
     
+    //Test functions
+    function get_notary()
+    public view returns(int a){
+	return count_notary;
+    }
+
+    function get_bidder()
+    public view returns(int a){
+	return count_bidder;
+    }
+
+    function check_add_items_bidder()
+    public view returns(int a){
+        int256 flag = 0;
+        for(int256 i=0; i<count_bidder; i++)
+        {
+            return int256(bidders[0].index);
+        }
+    }
+
+    function get_sort()
+    public view returns(int a){
+        int256 flag = 0;
+	    for(int256 i=0; i<next_notary; i++)
+        {
+            if(sorted_bids[i]>sorted_bids[i+1])
+                flag = 0;
+            else
+            {
+                flag = 1;
+                break;
+            }
+        }
+    return flag;
+    }
+
+    function get_winner()
+    public view returns(int a){
+        int256 x = 1;
+        int256 b = 2;
+        int256 c = 5;
+        int256 d = 16;
+        int256 e = 8;
+        int256 f = 13;
+        int256 flag = 0;
+        if(isEqual(x,b,c,d,e,f) == 0)
+            flag = 0;
+        else
+            flag = 1;
+        return flag;
+    }    
+
+    function get_pay()
+    public view returns(int a){
+        int256 x = 16;
+        int256 y = 0;
+        int256 z = 1;
+        int256 flag = 0;
+        if(sqrt(x) == 4)
+            flag = 0;
+        else
+            flag = 1;
+        return flag;
+    }
+    
     //only for testing purpose
     function test(int256 id) 
     {
