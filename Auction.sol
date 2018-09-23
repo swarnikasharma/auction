@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 contract Auction{
     address public addr_auctioneer;
-    uint256 payment;
+    int256 payment;
     int256 public q;   //large prime
     uint256 public n_bid_items;
     uint256 public item_index;
@@ -9,7 +9,7 @@ contract Auction{
     int256 public count_bidder;
     int256 public count_winner;
     int256 public next_notary;
-    bool public auction_open;
+    bool auction_complete;
 
     struct bidder{
         address addr_bidder;
@@ -38,10 +38,9 @@ contract Auction{
     function Auction(int256 prime, uint256 n)
     {
         addr_auctioneer=msg.sender;
-        payment=10000;
+        payment=100000;
         q=prime;
         n_bid_items=n;
-        auction_open=false;
         count_bidder = 0;
         count_notary=0;
         count_winner=0;
@@ -94,11 +93,6 @@ contract Auction{
                 bid_items[item_index]=item_id;
                 item_index=item_index+1;
             }
-            if(item_index==n_bid_items)
-            {
-                auction_open = true;
-            }
-        
     }
     //functions that registers notary
    
@@ -114,7 +108,7 @@ contract Auction{
     //function to add items that the bidder wants to bid on 
     function add_bid_items(int256 u,int256 v)
     {
-        if(auction_open&&msg.sender!=addr_auctioneer)
+        if(msg.sender!=addr_auctioneer)
         {
             int256 id=getBidderId(msg.sender);
             if(id!=-1)
@@ -131,7 +125,7 @@ contract Auction{
     
     //procedure1 called by auctioneer
     //parameters: notary id1,notary id2,value u1,value u2,value v1,value v2
-   function isEqual(int256 id1,int256 id2,int256 u1,int256 u2,int256 v1,int256 v2) public returns(int256 result) 
+    function isEqual(int256 id1,int256 id2,int256 u1,int256 u2,int256 v1,int256 v2) public returns(int256 result) 
     {
         int256 sum = 0;
         notaries[id1].pay++;
@@ -140,16 +134,13 @@ contract Auction{
         int256 val2=v1-v2;
         if((val1+val2)%q==0)return 0;
         if(val1 + val2 < 0)
-        {
             sum = val1 + val2 + q;
-        }
         else
-        {
             sum = val1 + val2;
-        }
         if(sum%q < q/2)return 1;
         return 2;
     }
+    
     function isLarger(int256 x, int256 y) public returns(int256 result)
     {
         int256 u1=bidders[assigned_notary[x]].u_w;
@@ -160,9 +151,8 @@ contract Auction{
     }
     function sort()
     {
-        //if(msg.sender==addr_auctioneer&&auction_open)
-        //{
-          //  auction_open=false;
+        if(msg.sender==addr_auctioneer)
+        {
             for(int256 k=0;k<next_notary;k++)
             {
                 sorted_bids[k]=k;
@@ -182,7 +172,7 @@ contract Auction{
                 winners[0] = sorted_bids[0];
                 count_winner++;
             }
-        //}
+        }
     }
     //parameters: notray id1,notary id2
     function unique_items(int256 id1,int256 id2) public returns(bool result)
@@ -220,22 +210,22 @@ contract Auction{
     }
     function announce_winners()
     {
-        //if(msg.sender==addr_auctioneer&&!auction_open)
-    //    {
+        if(msg.sender==addr_auctioneer)
+        {
             for(int i=1;i<next_notary;i++)
             {
                 if(compare_bidders(sorted_bids[i]))
                 {
-                    winners[count_winner]=i;
+                    winners[count_winner]=sorted_bids[i];
                     count_winner++;
                 }
             }
-      //  }
+        }
 
     }
-    function sqrt(uint256 x) returns (uint256 y)
+    function sqrt(int256 x) returns (int256 y)
     {
-        uint256 z = (x + 1) / 2;
+        int256 z = (x + 1) / 2;
         y = x;
         while (z < y)
         {
@@ -243,14 +233,13 @@ contract Auction{
             z = (x / z + z) / 2;
         }
     }
-    /*
-    function getPay(int256 i,int256 j) public returns (uint256 pay)
+    function getPay(int256 i,int256 j) public returns (int256 pay)
     {
         int256 p=(bidders[assigned_notary[j]].u_w+bidders[assigned_notary[j]].v_w)%q;
-        pay=p*sqrt(bidders[assigned_notary[i]].n_items);
+        pay=p*sqrt(int256(bidders[assigned_notary[i]].n_items));
         return pay;
-    }*/
-    function process_payment()
+    }
+    function process_payment_of_winners()
     {
         if(msg.sender==addr_auctioneer)
         {
@@ -258,22 +247,34 @@ contract Auction{
             {
                 for(int256 j=0;j<count_bidder;j++)
                 {
-                    if(i!=j&&!unique_items(winners[i],sorted_bids[j]))
+                    if(winners[i]!=sorted_bids[j]&&!unique_items(winners[i],sorted_bids[j]))
                     {
                         int256 k;
                         for(k=0;k<j;k++)
                         {
-                            if(i!=k&&!unique_items(sorted_bids[k],sorted_bids[j]))
+                            if(winners[i]!=sorted_bids[k]&&!unique_items(sorted_bids[k],sorted_bids[j]))
                              break;
                         }
                         if(k==j)
                         {
-                            //bidders[winners[i]].pay=getPay(i,j);
-                            //break;
+                            bidders[winners[i]].pay=getPay(winners[i],sorted_bids[j]);
+                            break;
                         }
                         
                     }
                 }
+            }
+        }
+        auction_complete=true;
+    }
+    function process_payment_of_notaries()
+    {
+        if(auction_complete)
+        {
+            for(int256 i=0;i<next_notary;i++)
+            {
+                notaries[i].pay=notaries[i].pay*q;
+                payment=payment-notaries[i].pay;
             }
         }
     }
