@@ -7,6 +7,7 @@ contract Auction{
     uint256 public item_index;
     int256 public count_notary;
     int256 public count_bidder;
+    int256 public count_winner;
     int256 public next_notary;
     bool public auction_open;
     int256 public x;
@@ -22,16 +23,14 @@ contract Auction{
     
     struct notary{
         address addr_notary;
-        uint256 flag;
         int256 pay;
     }
-    bidder public t;    //for testing
     mapping(int256 => int256) public winners;
     mapping(int256 => bidder) public bidders;
-    mapping(int256 => int256) public assigned_notary;  //notary assigned to bidder
+    mapping(int256 => int256) public assigned_notary;  //notary-bidder assignment
     mapping(uint256 => uint256) public bid_items;      //items for auction
     mapping(int256 => notary) public notaries;
-    mapping(int256=>int256) public sorted_bids;
+    mapping(int256 => int256) public sorted_bids;
     
     /*************************************************************************************************/
     
@@ -45,15 +44,14 @@ contract Auction{
         auction_open=false;
         count_bidder = 0;
         count_notary=0;
+        count_winner=0;
         next_notary=0;
     }
     //function to register notary
      function register_notary()
     {
         notaries[count_notary].addr_notary=msg.sender;
-        notaries[count_notary].flag=0;
         count_notary++;
-        
     }
     //function that registers bidder
     function register_bidder(int256 u_w,int256 v_w,uint n_items)
@@ -68,11 +66,10 @@ contract Auction{
         bidders[count_bidder].v_w=v_w;
         bidders[count_bidder].n_items=n_items;
         bidders[count_bidder].index=0;
-        //yet to confirm
+        //assign notary to this bidder
         if(count_notary>=count_bidder&&next_notary<count_notary)
         {
-          assigned_notary[next_notary]=count_bidder-1;
-          notaries[next_notary].flag=1;
+          assigned_notary[next_notary]=count_bidder;
           next_notary++;
           count_bidder++;
         }
@@ -121,22 +118,9 @@ contract Auction{
         }
         
     }
-    /* function comparison1(int256 x, int256 y) public returns(int256 val1)
-    {
-       int256 u1 = bidders[assigned_notary[x]].u_w;
-       int256 u2 = bidders[assigned_notary[y]].u_w;
-       return u1-u2;
-    }
     
-    function comparison2(int256 x, int256 y) public returns(int256 val2)
-    {
-       int256 v1 = bidders[assigned_notary[x]].v_w;
-       int256 v2 = bidders[assigned_notary[y]].v_w;
-       return v1-v2;
-    }
-    */
     //procedure1 called by auctioneer
-
+    //parameters: notary id1,notary id2,value u1,value u2,value v1,value v2
     function isEqual(int256 id1,int256 id2,int256 u1,int256 u2,int256 v1,int256 v2) public returns(int256 result) 
     {
         notaries[id1].pay++;
@@ -148,6 +132,7 @@ contract Auction{
         return 2;
         
     }
+    //
     function isLarger(int256 x, int256 y) public returns(int256 result)
     {
         int256 u1=bidders[assigned_notary[x]].u_w;
@@ -158,32 +143,38 @@ contract Auction{
     }
     function sort()
     {
-        for(int256 i=0;i<next_notary;i++)
+        for(int256 k=0;k<next_notary;k++)
+        {
+            sorted_bids[k]=k;
+        }
+        for(int256 i=0;i<next_notary-1;i++)
         {
             int256 max=i;
             for(int256 j=i+1;j<next_notary;j++)
             {
-                if(isLarger(max,j) == 2)
-                    max=j;    
+                 if(isLarger(sorted_bids[max],sorted_bids[j]) == 2)
+                    max=j;
             }
-            sorted_bids[i]=max;
+            (sorted_bids[i],sorted_bids[max])=(sorted_bids[max],sorted_bids[i]);
         }
-        
-        winners[0] = sorted_bids[0];
+        if(count_bidder>0)
+        {
+            winners[0] = sorted_bids[0];
+            count_winner++;
+        }
     }
-    
-    function compare_item(int256 id1,int256 id2) public returns(bool result)
+    //parameters: notray id1,notary id2
+    function unique_items(int256 id1,int256 id2) public returns(bool result)
     {
         int256 flag = 0;
-        
-        for(uint256 i = 0; i <bidders[id1].n_items; i++)//for every item of bidder1
+        for(uint256 i = 0; i <bidders[assigned_notary[id1]].n_items; i++)//for every item of bidder1
         {
-            int256 u1=bidders[id1].items[i][0];
-            int256 v1=bidders[id1].items[i][1];
+            int256 u1=bidders[assigned_notary[id1]].items[i][0];
+            int256 v1=bidders[assigned_notary[id1]].items[i][1];
             for(uint256 j=0;j<bidders[id2].n_items;j++)//for every item of bidder2
             {
-                int256 u2=bidders[id2].items[j][0];
-                int256 v2=bidders[id2].items[j][1];
+                int256 u2=bidders[assigned_notary[id2]].items[j][0];
+                int256 v2=bidders[assigned_notary[id2]].items[j][1];
                 if(isEqual(id1,id2,u1,u2,v1,v2)==0)
                 {
                     flag=1;
@@ -196,10 +187,31 @@ contract Auction{
         }
         return true;
     }
+    //parameters: notary id
+    function compare_bidders(int256 id) public returns(bool result)
+    {
+        for(int i=0;i<count_winner;i++)
+        {
+            if(!unique_items(id,winners[i]))
+                return false;
+        }
+        return true;
+    }
+    function announce_winners()
+    {
+        for(int i=1;i<next_notary;i++)
+        {
+            if(compare_bidders(i))
+            {
+                winners[count_winner]=i;
+                count_winner++;
+            }
+        }
+    }
+    
     //only for testing purpose
     function test(int256 id) 
     {
-       t=bidders[id];
-       //x = bidders[sorted_bids[0]].items[1][0];
+       
     }
 }
