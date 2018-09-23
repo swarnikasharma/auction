@@ -155,7 +155,7 @@ contract Auction{
                  if(isLarger(sorted_bids[max],sorted_bids[j]) == 2)
                     max=j;
             }
-            (sorted_bids[i],sorted_bids[max])=(sorted_bids[max],sorted_bids[i]);
+             (sorted_bids[i],sorted_bids[max])=(sorted_bids[max],sorted_bids[i]);
         }
         if(count_bidder>0)
         {
@@ -201,7 +201,7 @@ contract Auction{
     {
         for(int i=1;i<next_notary;i++)
         {
-            if(compare_bidders(i))
+            if(compare_bidders(sorted_bids[i]))
             {
                 winners[count_winner]=i;
                 count_winner++;
